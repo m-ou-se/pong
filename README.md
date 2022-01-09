@@ -11,5 +11,5 @@ See
 Install it with `cargo install --git https://github.com/m-ou-se/pong`.
 
 You either need to run it as root, or you need to disable your kernel's ping
-reply with `sysctl net.ipv4.icmp_echo_ignore_all=1` and give this program
-`cap_net_raw` capabilities with `setcap cap_net_raw=ep ~/.cargo/bin/pong`.
+reply with `sysctl net.ipv4.icmp_echo_ignore_all=1 net.ipv6.icmp.echo_ignore_all=1`
+and give this program `cap_net_raw` capabilities with `setcap cap_net_raw=ep ~/.cargo/bin/pong`.

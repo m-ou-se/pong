@@ -7,7 +7,7 @@ mod disable_system_pong;
 
 use anyhow::{bail, Context, Result};
 use disable_system_pong::DisableSystemPong;
-use libc::{socket, AF_INET, AF_INET6, IPPROTO_ICMP, SOCK_RAW};
+use libc::{socket, AF_INET, AF_INET6, IPPROTO_ICMP, IPPROTO_ICMPV6, SOCK_RAW};
 use nix::errno::Errno;
 use nix::poll::{poll, PollFd, PollFlags};
 use std::io::ErrorKind;
@@ -19,8 +19,14 @@ use std::time::{Duration, SystemTime};
 // It's not really a UdpSocket, but there's no IcmpSocket in std and the interface is close enough. :)
 type IcmpSocket = UdpSocket;
 
-fn open_icmp_socket(inet: i32) -> Result<IcmpSocket> {
-    let sock = unsafe { socket(inet, SOCK_RAW, IPPROTO_ICMP) };
+fn open_icmp_socket(ipv6: bool) -> Result<IcmpSocket> {
+    let sock = unsafe {
+        if ipv6 {
+            socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6)
+        } else {
+            socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
+        }
+    };
 
     if sock == -1 {
         let err = std::io::Error::last_os_error();
@@ -29,7 +35,7 @@ fn open_icmp_socket(inet: i32) -> Result<IcmpSocket> {
                 "unable to create a raw {} ICMP socket\n\n\
                 Re-run this program as root or with cap_net_raw capabilities \
                 (using `setcap cap_net_raw=ep {:?}`).",
-                if inet == AF_INET6 { "IPv6" } else { "IPv4" },
+                if ipv6 { "IPv6" } else { "IPv4" },
                 std::env::args_os().next().unwrap()
             );
         } else {
@@ -48,8 +54,8 @@ fn main() -> Result<()> {
 
     let mut disable_pong = DisableSystemPong::activate()?;
 
-    let sock4 = open_icmp_socket(AF_INET)?;
-    let sock6 = open_icmp_socket(AF_INET6)?;
+    let sock4 = open_icmp_socket(false)?;
+    let sock6 = open_icmp_socket(true)?;
 
     let mut buf = [0; 1024];
 
@@ -77,7 +83,7 @@ fn main() -> Result<()> {
 
         for (ipv6, fd, sock) in [(false, fds[0], &sock4), (true, fds[1], &sock6)] {
             if fd.revents().unwrap().contains(PollFlags::POLLIN) {
-                let ip_header_len = if ipv6 { 40 } else { 20 };
+                let ip_header_len = if ipv6 { 0 } else { 20 };
 
                 let (len, addr) = sock.recv_from(&mut buf).context("recv_from failed")?;
 
@@ -87,7 +93,9 @@ fn main() -> Result<()> {
 
                 let icmp = &mut buf[ip_header_len..len];
 
-                if icmp[0..2] != [8, 0] {
+                let (req_type, reply_type) = if ipv6 { (128, 129) } else { (8, 0) };
+
+                if icmp[0..2] != [req_type, 0] {
                     // Not a ping packet.
                     continue;
                 }
@@ -98,7 +106,8 @@ fn main() -> Result<()> {
                 let parsed = parse_payload(now, &icmp[8..]);
 
                 // Transform ping packet into pong packet
-                icmp[0..2].fill(0);
+                icmp[0] = reply_type;
+                icmp[1] = 0;
 
                 // Change the payload to get better ping times.
                 if let Some((encoding, timestamp)) = parsed {

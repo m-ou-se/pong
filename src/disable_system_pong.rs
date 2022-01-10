@@ -23,8 +23,8 @@ impl DisableSystemPong {
                 if write(PATH_IPV4, "1\n").is_err() {
                     bail!(
                         "unable to disable the system's IPv4 ICMP echo reply\n\n\
-                    Disable it manually (using `sysctl net.ipv4.icmp_echo_ignore_all=1`), \
-                    or re-run this program as root."
+                        Disable it manually (using `sysctl net.ipv4.icmp_echo_ignore_all=1`), \
+                        or re-run this program as root."
                     );
                 }
                 eprintln!("disabled the system's IPv4 ICMP echo reply");
@@ -40,8 +40,8 @@ impl DisableSystemPong {
                 if write(PATH_IPV6, "1\n").is_err() {
                     bail!(
                         "unable to disable the system's IPv6 ICMP echo reply\n\n\
-                    Disable it manually (using `sysctl net.ipv6.icmp.echo_ignore_all=1`), \
-                    or re-run this program as root."
+                        Disable it manually (using `sysctl net.ipv6.icmp.echo_ignore_all=1`), \
+                        or re-run this program as root."
                     );
                 }
                 eprintln!("disabled the system's IPv6 ICMP echo reply");

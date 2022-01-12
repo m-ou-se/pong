@@ -1,7 +1,7 @@
 # Pong
 
 A Linux program that replies to `ping` but modifies the payload of the ICMP
-package to get lower ping times in some `ping` implementations.
+packet to get lower ping times in some `ping` implementations.
 
 See
 - https://twitter.com/m_ou_se/status/1480184730058375176

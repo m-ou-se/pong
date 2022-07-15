@@ -1,5 +1,3 @@
-#![feature(int_abs_diff)]
-
 #[cfg(not(target_os = "linux"))]
 compile_error!("this program only works on Linux");
 
